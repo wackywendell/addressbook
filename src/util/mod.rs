@@ -1,1 +1,3 @@
-pub mod rc;
+mod rc;
+
+pub use rc::Rc;
