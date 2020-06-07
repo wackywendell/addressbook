@@ -1,14 +1,19 @@
 use std::alloc::{alloc, dealloc, Layout};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 // A reference-counted pointer.
 //
 // Rc<T> will generally live on the stack, but its value will be on the heap.
 // When cloned, it keeps an internal count of how many references exist, and
 // will deallocate the internal value when the last reference is dropped.
+//
+//
+// Rc<T> is also automatically !Sync and !Send. Because we allow the internal
+// value to be mutated from any reference, Rc must be on exactly one thread -
+// that's the only way we can be sure that only one thread mutates it at a time
 pub struct Rc<T> {
     ref_count: *mut usize,
-    value: *const T,
+    value: *mut T,
 }
 
 impl<T> Rc<T> {
@@ -44,6 +49,12 @@ impl<T> Deref for Rc<T> {
     }
 }
 
+impl<T> DerefMut for Rc<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe { self.value.as_mut().unwrap() }
+    }
+}
+
 impl<T> Clone for Rc<T> {
     fn clone(&self) -> Self {
         unsafe {
@@ -67,7 +78,7 @@ impl<T> Drop for Rc<T> {
             // There are other references still out there, so leave them be
             std::mem::forget(self.value);
             std::mem::forget(self.ref_count);
-            self.value = std::ptr::null();
+            self.value = std::ptr::null_mut();
             self.ref_count = std::ptr::null::<*const usize>() as *mut usize;
             return;
         }
@@ -79,8 +90,8 @@ impl<T> Drop for Rc<T> {
             dealloc(self.ref_count as *mut u8, Layout::new::<usize>());
             std::mem::forget(self.value);
             std::mem::forget(self.ref_count);
-            self.value = std::ptr::null();
-            self.ref_count = std::ptr::null::<*const usize>() as *mut usize;
+            self.value = std::ptr::null_mut();
+            self.ref_count = std::ptr::null_mut();
         }
     }
 }
