@@ -1,5 +1,5 @@
+use core::ops::{Deref, DerefMut};
 use std::alloc::{alloc, dealloc, Layout};
-use std::ops::{Deref, DerefMut};
 
 // A reference-counted pointer.
 //
@@ -76,22 +76,14 @@ impl<T> Drop for Rc<T> {
         };
         if count > 0 {
             // There are other references still out there, so leave them be
-            std::mem::forget(self.value);
-            std::mem::forget(self.ref_count);
-            self.value = std::ptr::null_mut();
-            self.ref_count = std::ptr::null::<*const usize>() as *mut usize;
             return;
         }
 
         // This was the last reference - let's clean it up
         unsafe {
-            std::ptr::drop_in_place(self.value as *mut T);
+            core::ptr::drop_in_place(self.value as *mut T);
             dealloc(self.value as *mut u8, Layout::new::<T>());
             dealloc(self.ref_count as *mut u8, Layout::new::<usize>());
-            std::mem::forget(self.value);
-            std::mem::forget(self.ref_count);
-            self.value = std::ptr::null_mut();
-            self.ref_count = std::ptr::null_mut();
         }
     }
 }
@@ -99,7 +91,6 @@ impl<T> Drop for Rc<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::ptr::null;
     use core::sync::atomic::{AtomicIsize, Ordering};
 
     #[derive(Debug, Clone)]
@@ -127,8 +118,8 @@ mod tests {
         let p1 = Rc::new(value.clone());
 
         // Pointers should not be null
-        assert_ne!(p1.ref_count as *const u8, null());
-        assert_ne!(p1.value as *const u8, null());
+        assert!(!p1.ref_count.is_null());
+        assert!(!p1.value.is_null());
         unsafe {
             // Values on the heap should be as expected
             assert_eq!(*p1.ref_count, 1);
@@ -156,8 +147,8 @@ mod tests {
         let p1 = Rc::new(value.clone());
 
         // Pointers should not be null
-        assert_ne!(p1.ref_count as *const u8, null());
-        assert_ne!(p1.value as *const u8, null());
+        assert!(!p1.ref_count.is_null());
+        assert!(!p1.value.is_null());
         unsafe {
             // Values on the heap should be as expected
             assert_eq!(*p1.ref_count, 1);
@@ -179,8 +170,8 @@ mod tests {
         assert_eq!(drops.load(Ordering::SeqCst), 0);
 
         // Pointers should still not be null for p1
-        assert_ne!(p1.ref_count as *const u8, null());
-        assert_ne!(p1.value as *const u8, null());
+        assert!(!p1.ref_count.is_null());
+        assert!(!p1.value.is_null());
         unsafe {
             // Values on the heap should be as expected
             assert_eq!(*p1.ref_count, 1);
