@@ -69,7 +69,6 @@ impl<T> Clone for Rc<T> {
 
 impl<T> Drop for Rc<T> {
     fn drop(&mut self) {
-        println!("Dropping!");
         let count = unsafe {
             *self.ref_count -= 1;
             *self.ref_count

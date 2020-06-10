@@ -1,9 +1,13 @@
 pub struct Contact {
+    // The String type is on a reference to the heap, but let's ignore that for
+    // now
     pub name: String,
     pub address: String,
 }
 
 pub struct AddressBook {
+    // A Vec is a heap-allocated array. Internally, its a pointer to the array,
+    // an int for its length, and an int for its capacity
     contacts: Vec<Contact>,
 }
 
@@ -57,4 +61,12 @@ pub fn create_book() -> AddressBook {
     book.add(carol);
 
     book
+}
+
+pub fn main() {
+    let book = create_book();
+
+    for (i, contact) in book.list().iter().enumerate() {
+        println!("{:2}: {:10} {:10}", i, contact.name, contact.address);
+    }
 }
