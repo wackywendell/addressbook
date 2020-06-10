@@ -81,13 +81,13 @@ struct AddressBook create_book()
     // dropped, but the copies in the array on the heap live on
 }
 
-int main()
+void pointers_main()
 {
     struct AddressBook book = create_book();
 
     for (int i = 0; i < book.size; i++)
     {
-        printf("%2d: %10s - %20s\n", i, book.contacts[i].name, book.contacts[i].address);
+        printf("%2d: %-10s %-20s\n", i, book.contacts[i].name, book.contacts[i].address);
     }
 
     // When the function ends, the book on the stack will be dropped, but the

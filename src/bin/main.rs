@@ -1,5 +1,8 @@
 fn main() {
-    println!("-- Owned Version --");
+    println!("-- Pointers Version --");
+    addressbook::pointers::main();
+
+    println!("\n\n-- Owned Version --");
     addressbook::owned::main();
 
     println!("\n\n-- Reference-Counted Version --");
