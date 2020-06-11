@@ -9,7 +9,7 @@ name = "addressbook"
 path = "src/lib.rs"
 
 [dependencies]
-gc = { version = "0.3", features = ["derive"] }
+shredder = "0.1.1"
 
 [build-dependencies]
 cc = "1.0"

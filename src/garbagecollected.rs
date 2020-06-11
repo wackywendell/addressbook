@@ -1,10 +1,16 @@
-use gc::{Finalize, Gc, Trace};
+use core::borrow::BorrowMut;
+use core::cell::RefCell;
 
-#[derive(Trace, Finalize)]
+use shredder::{Gc, Scan};
+
+type Gcc<T> = Gc<RefCell<T>>;
+
+#[derive(Scan)]
 pub struct Contact {
     pub name: String,
     pub address: String,
-    relations: Vec<(String, Gc<Contact>)>,
+    // relations: Vec<(String, Gcc<Contact>)>,
+    relations: Vec<Gcc<Contact>>,
 }
 
 impl Contact {
@@ -16,17 +22,19 @@ impl Contact {
         }
     }
 
-    pub fn add_relation(&mut self, relationship: String, contact: Gc<Contact>) {
-        self.relations.push((relationship, contact));
+    pub fn add_relation(&mut self, relationship: String, contact: Gcc<Contact>) {
+        // self.relations.push((relationship, contact));
+        self.relations.push(contact);
     }
 
-    pub fn relations(&self) -> &[(String, Gc<Contact>)] {
+    pub fn relations(&self) -> &[Gcc<Contact>] {
+        // &[(String, Gc<Contact>)] {
         &self.relations[..]
     }
 }
 
 pub struct AddressBook {
-    contacts: Vec<Gc<Contact>>,
+    contacts: Vec<Gcc<Contact>>,
 }
 
 // A garbage-collected version of the address book. Contacts are kept in an
@@ -39,22 +47,22 @@ impl AddressBook {
         };
     }
 
-    pub fn add(&mut self, contact: Contact) -> Gc<Contact> {
+    pub fn add(&mut self, contact: Contact) -> Gcc<Contact> {
         // This takes ownership of contact, copying it from the stack (contact)
         // into the heap, by creating a new garbage-collected contact.
         // A garbage-collected pointer to it is returned.
-        let rc = Gc::new(contact);
+        let rc = Gcc::new(RefCell::new(contact));
         self.contacts.push(rc.clone());
         rc
     }
 
-    pub fn add_shared(&mut self, contact: Gc<Contact>) {
+    pub fn add_shared(&mut self, contact: Gcc<Contact>) {
         // This adds a reference to an already existing Contact to this address
         // book
         self.contacts.push(contact);
     }
 
-    pub fn list(&self) -> &[Gc<Contact>] {
+    pub fn list(&self) -> &[Gcc<Contact>] {
         &self.contacts[..]
     }
 }
@@ -79,7 +87,8 @@ pub fn create_book() -> AddressBook {
     };
 
     // Add a relation to alice
-    bob.relations.push(("sister".to_owned(), alice_ref.clone()));
+    // bob.relations.push(("sister".to_owned(), alice_ref.clone()));
+    bob.borrow_mut().relations.push(alice_ref.clone());
 
     // Copy this contact into the array of contacts
     let _bob_ref = book.add(bob);
@@ -100,10 +109,13 @@ pub fn create_book() -> AddressBook {
 pub fn main() {
     let book = create_book();
 
-    for (i, contact) in book.list().iter().enumerate() {
+    for (i, contact_ref) in book.list().iter().enumerate() {
+        let contact = contact_ref.borrow();
         println!("{:2}: {:10} {:10}", i, contact.name, contact.address);
-        for (relationship, person) in contact.relations() {
-            println!("    ==> {}: {}", relationship, person.name);
+        // for (relationship, person) in contact.relations() {
+        //     println!("    ==> {}: {}", relationship, person.name);
+        for person in contact.relations() {
+            println!("    ==> {}", person.borrow().name);
         }
     }
 }
