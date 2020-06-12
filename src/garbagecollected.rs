@@ -6,11 +6,16 @@ use shredder::{Gc, Scan};
 type Gcc<T> = Gc<RefCell<T>>;
 
 #[derive(Scan)]
+pub struct Relationship {
+    title: String,
+    person: Gcc<Contact>,
+}
+
+#[derive(Scan)]
 pub struct Contact {
     pub name: String,
     pub address: String,
-    // relations: Vec<(String, Gcc<Contact>)>,
-    relations: Vec<Gcc<Contact>>,
+    relations: Vec<Relationship>,
 }
 
 impl Contact {
@@ -24,10 +29,13 @@ impl Contact {
 
     pub fn add_relation(&mut self, relationship: String, contact: Gcc<Contact>) {
         // self.relations.push((relationship, contact));
-        self.relations.push(contact);
+        self.relations.push(Relationship {
+            title: relationship,
+            person: contact,
+        });
     }
 
-    pub fn relations(&self) -> &[Gcc<Contact>] {
+    pub fn relations(&self) -> &[Relationship] {
         // &[(String, Gc<Contact>)] {
         &self.relations[..]
     }
@@ -87,11 +95,15 @@ pub fn create_book() -> AddressBook {
     };
 
     // Add a relation to alice
-    // bob.relations.push(("sister".to_owned(), alice_ref.clone()));
-    bob.borrow_mut().relations.push(alice_ref.clone());
+    bob.borrow_mut()
+        .add_relation("sister".to_owned(), alice_ref.clone());
 
     // Copy this contact into the array of contacts
-    let _bob_ref = book.add(bob);
+    let bob_ref = book.add(bob);
+    // Add a relation from alice to bob
+    alice_ref
+        .borrow_mut()
+        .add_relation("brother".to_owned(), bob_ref.clone());
 
     // Add a third contact to the book
     let carol = Contact {
@@ -101,7 +113,16 @@ pub fn create_book() -> AddressBook {
     };
 
     // Copy this contact into the array of contacts
-    let _carol_ref = book.add(carol);
+    let carol_ref = book.add(carol);
+
+    // Add relationships to/from Bob
+    bob_ref
+        .borrow_mut()
+        .add_relation("spouse".to_owned(), carol_ref.clone());
+
+    carol_ref
+        .borrow_mut()
+        .add_relation("spouse".to_owned(), bob_ref.clone());
 
     book
 }
@@ -112,10 +133,12 @@ pub fn main() {
     for (i, contact_ref) in book.list().iter().enumerate() {
         let contact = contact_ref.borrow();
         println!("{:2}: {:10} {:10}", i, contact.name, contact.address);
-        // for (relationship, person) in contact.relations() {
-        //     println!("    ==> {}: {}", relationship, person.name);
-        for person in contact.relations() {
-            println!("    ==> {}", person.borrow().name);
+        for relationship in contact.relations() {
+            println!(
+                "    ==> {}: {}",
+                relationship.title,
+                relationship.person.borrow().name
+            );
         }
     }
 }
